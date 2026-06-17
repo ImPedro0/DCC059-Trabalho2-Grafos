@@ -9,13 +9,13 @@ struct Solucao {
     double custoTotal;
 };
 
-// 1. Algoritmo Guloso 
+// Algoritmo Guloso 
 Solucao algoritmoGuloso(const Grafo& grafo);
 
-// 2. Algoritmo Guloso Randomizado (Parâmetros: alfa, num_iterações)
+// Algoritmo Guloso Randomizado (Parâmetros: alfa, num_iterações)
 Solucao algoritmoGulosoRandomizado(const Grafo& grafo, double alpha, int numIteracoes);
 
-// 3. Algoritmo Guloso Randomizado Reativo (Parâmetros: num_iterações, tamanho do bloco)
+// Algoritmo Guloso Randomizado Reativo (Parâmetros: num_iterações, tamanho do bloco)
 Solucao algoritmoGulosoRandomizadoReativo(const Grafo& grafo, int numIteracoes, int tamanhoBloco);
 
-#endif // ALGORITMOS_H
+#endif

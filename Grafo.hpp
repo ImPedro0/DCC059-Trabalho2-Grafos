@@ -45,4 +45,4 @@ public:
     void imprimirFormatoVisualizacao() const;
 };
 
-#endif // GRAFO_H
+#endif

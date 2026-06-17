@@ -7,12 +7,65 @@ Solucao algoritmoGuloso(const Grafo& grafo) {
     Solucao solucao;
     solucao.custoTotal = 0.0;
     
-    // TODO: Implementar lógica do Guloso Construtivo para AGMG.
-    // Dica: Inicie em um nó qualquer, marque o grupo desse nó como visitado.
-    // Enquanto houver grupos não visitados, busque a aresta de menor peso 
-    // que ligue um nó já pertencente à árvore a um nó de um GRUPO ainda não visitado.
+    int numNos = grafo.getNumNos();
+    int numGrupos = grafo.getNumGrupos();
     
-    std::cout << "[Guloso] Concluido.\n";
+    if (numNos == 0 || numGrupos == 0) {
+        return solucao;
+    }
+
+    std::vector<bool> gruposVisitados(numGrupos, false);
+    
+    std::vector<int> nosNaArvore;
+
+    int noInicial = rand() % numNos;
+    int grupoInicial = grafo.getGrupo(noInicial);
+
+    gruposVisitados[grupoInicial] = true;
+    nosNaArvore.push_back(noInicial);
+    
+    int gruposConectados = 1;
+
+    while (gruposConectados < numGrupos) {
+        
+        Aresta melhorAresta;
+        melhorAresta.peso = std::numeric_limits<double>::max();
+        bool encontrouAresta = false;
+        int novoNo = -1;
+
+        for (int u : nosNaArvore) {
+            const std::vector<Aresta>& vizinhos = grafo.getAdjacentes(u);
+            
+            for (const Aresta& aresta : vizinhos) {
+                int v = aresta.destino;
+                int grupoDoDestino = grafo.getGrupo(v);
+
+                if (!gruposVisitados[grupoDoDestino]) {
+                    
+                    if (aresta.peso < melhorAresta.peso) {
+                        melhorAresta = aresta;
+                        novoNo = v;
+                        encontrouAresta = true;
+                    }
+                }
+            }
+        }
+
+        if (!encontrouAresta) {
+            std::cerr << "Erro: Nao foi possivel conectar todos os grupos. O grafo e desconexo!\n";
+            break;
+        }
+
+        solucao.arestas.push_back(melhorAresta);
+        solucao.custoTotal += melhorAresta.peso;
+
+        nosNaArvore.push_back(novoNo);
+        gruposVisitados[grafo.getGrupo(novoNo)] = true;
+        
+        gruposConectados++;
+    }
+
+    std::cout << "[Guloso] Concluido. Custo Encontrado: " << solucao.custoTotal << "\n";
     return solucao;
 }
 

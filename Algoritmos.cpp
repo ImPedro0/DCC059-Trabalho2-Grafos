@@ -25,7 +25,13 @@ Solucao construirSolucaoGRASP(const Grafo& grafo, double alpha) {
     std::vector<int> nosNaArvore;
 
     // Início aleatório (já dependente da semente do srand)
-    int noInicial = rand() % numNos;
+    int noInicial;
+
+    if(alpha == 0.0)
+        noInicial = 0;
+    else
+        noInicial = rand() % numNos;
+        
     int grupoInicial = grafo.getGrupo(noInicial);
 
     gruposVisitados[grupoInicial] = true;

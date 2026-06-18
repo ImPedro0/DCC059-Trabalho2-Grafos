@@ -3,10 +3,20 @@
 
 #include "Grafo.hpp"
 #include <vector>
+#include <string>
+#include <chrono>
 
 struct Solucao {
     std::vector<Aresta> arestas;
     double custoTotal;
+};
+
+struct ResultadoExecucao {
+    std::string nomeAlgoritmo;
+    double custoTotal;
+    double tempoExecucaoMs; // Tempo em milissegundos
+    unsigned int seed;
+    std::string parametros; // ex: "alpha=0.3, iter=1000"
 };
 
 // Algoritmo Guloso 

@@ -227,7 +227,7 @@ int main(int argc, char* argv[]) {
     }
     
     // Exibir tabela de estatísticas
-    std::cout << "\nAlgoritmo | Melhor Custo | Custo Médio | Tempo Médio (ms) | GAP Médio (%)\n";
+    std::cout << "\nAlgoritmo | Melhor Custo | Custo Medio | Tempo Medio (ms) | GAP Medio (%)\n";
     std::cout << "----------|--------------|------------|-----------------|-------------\n";
     
     for (const auto& stat : stats) {

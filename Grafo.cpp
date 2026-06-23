@@ -15,7 +15,7 @@ Grafo::~Grafo() {}
 
 void Grafo::adicionarAresta(int u, int v, double peso) {
     listaAdj[u].push_back({u, v, peso});
-    listaAdj[v].push_back({v, u, peso}); // AGMG roda em grafos não direcionados
+    listaAdj[v].push_back({v, u, peso});
     numArestas++;
 }
 
@@ -31,6 +31,8 @@ int Grafo::getNumGrupos() const { return numGrupos; }
 const std::vector<Aresta>& Grafo::getAdjacentes(int no) const { return listaAdj[no]; }
 int Grafo::getGrupo(int no) const { return nos[no].grupo; }
 
+// [Origem] [Destino] [Peso]
+
 Grafo* Grafo::carregarDeArquivo(const std::string& caminhoArquivo) {
     std::ifstream arquivo(caminhoArquivo);
     if (!arquivo.is_open()) {
@@ -38,20 +40,16 @@ Grafo* Grafo::carregarDeArquivo(const std::string& caminhoArquivo) {
         return nullptr;
     }
 
-    // Estrutura básica: Você precisará adaptar para bater com os .txt das instâncias reais
-    // Supondo: [Qtd_Nos] [Qtd_Arestas] [Qtd_Grupos]
     int n, m, k;
     arquivo >> n >> m >> k;
     Grafo* grafo = new Grafo(n);
 
-    // Lendo os grupos dos nós. Supondo: [Id_No] [Id_Grupo]
     for (int i = 0; i < n; ++i) {
         int id, grupo;
         arquivo >> id >> grupo;
         grafo->definirGrupo(id, grupo);
     }
 
-    // Lendo as arestas. Supondo: [Origem] [Destino] [Peso]
     for (int i = 0; i < m; ++i) {
         int u, v;
         double peso;
@@ -64,7 +62,6 @@ Grafo* Grafo::carregarDeArquivo(const std::string& caminhoArquivo) {
 }
 
 void Grafo::imprimirFormatoVisualizacao() const {
-    // Formata vértices e arestas permitindo copiar e colar na ferramenta visual
     for (int u = 0; u < numNos; ++u) {
         for (const auto& aresta : listaAdj[u]) {
             if (u < aresta.destino) { 

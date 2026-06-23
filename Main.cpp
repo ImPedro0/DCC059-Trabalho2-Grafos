@@ -9,17 +9,15 @@
 #include "Grafo.hpp"
 #include "Algoritmos.hpp"
 
-// Estrutura para armazenar resultados de uma execução
 struct ResultadoCompleto {
     std::string nomeAlgoritmo;
     double custoTotal;
     double tempoMs;
     unsigned int seed;
     std::string parametros;
-    double gap; // Desvio em relação ao ótimo
+    double gap;
 };
 
-// Função para exportar resultados em CSV
 void exportarCSV(const std::string& nomeInstancia, 
                  const std::vector<ResultadoCompleto>& resultados,
                  double otimo) {
@@ -33,19 +31,16 @@ void exportarCSV(const std::string& nomeInstancia,
         return;
     }
     
-    // Cabeçalho (apenas se arquivo novo)
     if (!arquivoExiste) {
         arquivo << "DataHora,Instancia,Algoritmo,Parametros,Seed,Custo,Tempo(ms),Gap(%)\n";
     }
     
-    // Data e hora atual
     auto agora = std::chrono::system_clock::now();
     auto tempo = std::chrono::system_clock::to_time_t(agora);
     std::ostringstream oss;
     oss << std::put_time(std::localtime(&tempo), "%Y-%m-%d %H:%M:%S");
     std::string dataHora = oss.str();
     
-    // Escrever cada resultado
     for (const auto& res : resultados) {
         arquivo << dataHora << ","
                 << nomeInstancia << ","
@@ -61,38 +56,30 @@ void exportarCSV(const std::string& nomeInstancia,
     std::cout << "\n✓ Resultados exportados para " << nomeArquivo << "\n";
 }
 
-// Função para calcular GAP em relação ao ótimo
 double calcularGap(double custo, double otimo) {
-    if (otimo <= 0) return 0.0; // Se ótimo não definido, retorna 0
+    if (otimo <= 0) return 0.0;
     return ((custo - otimo) / otimo) * 100.0;
 }
 
-// Função auxiliar para extrair nome do arquivo
 std::string extrairNomeArquivo(const std::string& caminho) {
     size_t pos = caminho.find_last_of("/\\");
     return (pos == std::string::npos) ? caminho : caminho.substr(pos + 1);
 }
 
 int main(int argc, char* argv[]) {
-    // Caminho fixo ou via argumento para a instância
     std::string caminhoArquivo = "instancia.txt";
     if(argc > 1) caminhoArquivo = argv[1];
     
-    // Valor ótimo conhecido (ajustar conforme o problema)
-    // Para instância.txt (4 nós, 2 grupos), o ótimo é 5
     double otimoCOnhecido = 5.0;
     if(argc > 2) otimoCOnhecido = std::stod(argv[2]);
 
-    // LÓGICA DE SEMENTE CORRIGIDA - Para reprodutibilidade
     unsigned int sementeBase;
     if (argc > 3) {
-        sementeBase = std::stoul(argv[3]); // Pega do terminal se fornecido
+        sementeBase = std::stoul(argv[3]);
     } else {
         sementeBase = std::chrono::system_clock::now().time_since_epoch().count();
     }
-    
-    // Usamos a semente base para alimentar um gerador.
-    // Assim, as 10 sementes das repetições serão aleatórias, porém determinísticas e reprodutíveis!
+
     std::mt19937 geradorSementes(sementeBase);
     
     Grafo* grafo = Grafo::carregarDeArquivo(caminhoArquivo);
@@ -108,26 +95,23 @@ int main(int argc, char* argv[]) {
     std::cout << "Otimo Conhecido: " << otimoCOnhecido << "\n";
     std::cout << "Semente Base: " << sementeBase << "\n\n";
     
-    // Parâmetros dos algoritmos
     double alpha = 0.3;
-    int iteracoesGRASP = 100;    // Mínimo 30, mas usando 100
-    int iteracoesReativo = 300;   // Mínimo 300
-    int tamanhoBloco = 50;        // Entre 30-50
+    int iteracoesGRASP = 100;  
+    int iteracoesReativo = 300;
+    int tamanhoBloco = 50;
 
     std::vector<ResultadoCompleto> todosOsResultados;
     
-    // ============ LOOP DE 10 REPETIÇÕES ============
     int NUM_REPETICOES = 10;
     
     for (int rep = 1; rep <= NUM_REPETICOES; ++rep) {
         std::cout << "\n=== REPETIÇÃO " << rep << "/" << NUM_REPETICOES << " ===\n";
         
-        // Cada repetição ganha uma semente derivada do gerador principal
         unsigned int sementeDaIteracao = geradorSementes();
         std::cout << "Semente da Iteracao: " << sementeDaIteracao << "\n";
         srand(sementeDaIteracao);
         
-        // --- 1. Algoritmo Guloso ---
+        // Algoritmo Guloso
         auto iniciGuloso = std::chrono::high_resolution_clock::now();
         Solucao solGuloso = algoritmoGuloso(*grafo);
         auto fimGuloso = std::chrono::high_resolution_clock::now();
@@ -145,10 +129,9 @@ int main(int argc, char* argv[]) {
         std::cout << "  [Guloso] Custo: " << solGuloso.custoTotal 
                   << ", Tempo: " << tempoGuloso << "ms, GAP: " << resGuloso.gap << "%\n";
         
-        // Reinicia seed para próximo algoritmo
         srand(sementeDaIteracao);
         
-        // --- 2. Algoritmo Guloso Randomizado ---
+        // Algoritmo Guloso Randomizado
         auto iniciGRASP = std::chrono::high_resolution_clock::now();
         Solucao solGRASP = algoritmoGulosoRandomizado(*grafo, alpha, iteracoesGRASP);
         auto fimGRASP = std::chrono::high_resolution_clock::now();
@@ -166,10 +149,9 @@ int main(int argc, char* argv[]) {
         std::cout << "  [GRASP] Custo: " << solGRASP.custoTotal 
                   << ", Tempo: " << tempoGRASP << "ms, GAP: " << resGRASP.gap << "%\n";
         
-        // Reinicia seed para próximo algoritmo
         srand(sementeDaIteracao);
         
-        // --- 3. Algoritmo Guloso Randomizado Reativo ---
+        // Algoritmo Guloso Randomizado Reativo
         auto iniciReativo = std::chrono::high_resolution_clock::now();
         Solucao solReativo = algoritmoGulosoRandomizadoReativo(*grafo, iteracoesReativo, tamanhoBloco);
         auto fimReativo = std::chrono::high_resolution_clock::now();
@@ -188,10 +170,8 @@ int main(int argc, char* argv[]) {
                   << ", Tempo: " << tempoReativo << "ms, GAP: " << resReativo.gap << "%\n";
     }
     
-    // ============ EXIBIR ESTATÍSTICAS ============
     std::cout << "\n\n=== ESTATÍSTICAS FINAIS ===\n";
     
-    // Cálculo de médias por algoritmo
     struct EstatisticasAlgoritmo {
         std::string nome;
         double custoMedio = 0.0;
@@ -226,7 +206,6 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    // Exibir tabela de estatísticas
     std::cout << "\nAlgoritmo | Melhor Custo | Custo Medio | Tempo Medio (ms) | GAP Medio (%)\n";
     std::cout << "----------|--------------|------------|-----------------|-------------\n";
     
@@ -238,10 +217,8 @@ int main(int argc, char* argv[]) {
                   << std::setw(11) << stat.gapMedio << "\n";
     }
     
-    // Exportar para CSV
     exportarCSV(nomeInstancia, todosOsResultados, otimoCOnhecido);
     
-    // Libera a memória
     delete grafo;
     
     std::cout << "\n✓ Teste concluído com sucesso!\n";

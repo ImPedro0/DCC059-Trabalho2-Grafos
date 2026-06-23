@@ -14,9 +14,9 @@ struct Solucao {
 struct ResultadoExecucao {
     std::string nomeAlgoritmo;
     double custoTotal;
-    double tempoExecucaoMs; // Tempo em milissegundos
+    double tempoExecucaoMs; 
     unsigned int seed;
-    std::string parametros; // ex: "alpha=0.3, iter=1000"
+    std::string parametros;
 };
 
 // Algoritmo Guloso 

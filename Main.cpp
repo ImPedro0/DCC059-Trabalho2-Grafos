@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <ctime>
+#include <sstream>
 #include "Grafo.hpp"
 #include "Algoritmos.hpp"
 
@@ -53,7 +54,7 @@ void exportarCSV(const std::string& nomeInstancia,
     }
     
     arquivo.close();
-    std::cout << "\n✓ Resultados exportados para " << nomeArquivo << "\n";
+    std::cout << "\n Resultados exportados para " << nomeArquivo << "\n";
 }
 
 double calcularGap(double custo, double otimo) {
@@ -90,7 +91,7 @@ int main(int argc, char* argv[]) {
     std::string nomeInstancia = extrairNomeArquivo(caminhoArquivo);
     std::cout << "=== TESTE DO PROGRAMA AGMG ===\n";
     std::cout << "Instancia: " << nomeInstancia << "\n";
-    std::cout << "Grafo processado! Nós: " << grafo->getNumNos() 
+    std::cout << "Grafo processado! Nos: " << grafo->getNumNos() 
               << ", Grupos: " << grafo->getNumGrupos() << "\n";
     std::cout << "Otimo Conhecido: " << otimoCOnhecido << "\n";
     std::cout << "Semente Base: " << sementeBase << "\n\n";
@@ -105,7 +106,7 @@ int main(int argc, char* argv[]) {
     int NUM_REPETICOES = 10;
     
     for (int rep = 1; rep <= NUM_REPETICOES; ++rep) {
-        std::cout << "\n=== REPETIÇÃO " << rep << "/" << NUM_REPETICOES << " ===\n";
+        std::cout << "\n=== REPETICAO " << rep << "/" << NUM_REPETICOES << " ===\n";
         
         unsigned int sementeDaIteracao = geradorSementes();
         std::cout << "Semente da Iteracao: " << sementeDaIteracao << "\n";
@@ -170,7 +171,7 @@ int main(int argc, char* argv[]) {
                   << ", Tempo: " << tempoReativo << "ms, GAP: " << resReativo.gap << "%\n";
     }
     
-    std::cout << "\n\n=== ESTATÍSTICAS FINAIS ===\n";
+    std::cout << "\n\n=== ESTATISTICAS FINAIS ===\n";
     
     struct EstatisticasAlgoritmo {
         std::string nome;
@@ -221,6 +222,6 @@ int main(int argc, char* argv[]) {
     
     delete grafo;
     
-    std::cout << "\n✓ Teste concluído com sucesso!\n";
+    std::cout << "\n Teste concluido com sucesso!\n";
     return 0;
 }

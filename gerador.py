@@ -1,6 +1,7 @@
 import math
 import random
-import sys
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 
 # Função matemática para descobrir a orientação de 3 pontos
 def ccw(A, B, C):
@@ -8,7 +9,6 @@ def ccw(A, B, C):
 
 # Verifica se a reta (A,B) cruza com a reta (C,D)
 def intersect(A, B, C, D):
-    # Se compartilham um vértice, não é um "cruzamento" ilegal para grafos planares
     if A == C or A == D or B == C or B == D:
         return False
     return ccw(A, C, D) != ccw(B, C, D) and ccw(A, B, C) != ccw(A, B, D)
@@ -18,22 +18,20 @@ def gerar_instancia(num_nos, num_grupos, densidade, arquivo_saida):
         print("Erro: O número de grupos não pode ser maior que o número de nós.")
         return
 
-    # 1. Gerar pontos aleatórios 2D (simulando a posição dos nós)
+    # 1. Gerar pontos aleatórios 2D
     pontos = [(random.uniform(0, 1000), random.uniform(0, 1000)) for _ in range(num_nos)]
 
     # 2. Criar todas as possíveis ligações ordenadas por distância
-    #    (Ligar os mais próximos primeiro ajuda muito a evitar cruzamentos!)
     arestas_possiveis = []
     for i in range(num_nos):
         for j in range(i + 1, num_nos):
             dist = math.hypot(pontos[i][0] - pontos[j][0], pontos[i][1] - pontos[j][1])
             arestas_possiveis.append((dist, i, j))
-    
-    arestas_possiveis.sort() # Ordena da menor para a maior distância
+    arestas_possiveis.sort() 
 
     arestas_finais = []
     
-    # Estrutura Union-Find para garantir que o grafo fique CONEXO (Árvore Geradora Mínima)
+    # Estrutura Union-Find (Garante conexidade)
     pai = list(range(num_nos))
     def find(i):
         if pai[i] == i: return i
@@ -50,62 +48,88 @@ def gerar_instancia(num_nos, num_grupos, densidade, arquivo_saida):
 
     # 3. Processar arestas
     for dist, u, v in arestas_possiveis:
-        # Verifica se essa aresta cruza com alguma aresta que já aceitamos
         cruza = False
         for (eu, ev, _) in arestas_finais:
             if intersect(pontos[u], pontos[v], pontos[eu], pontos[ev]):
                 cruza = True
                 break
         
-        # Se NÃO cruza, é candidata a entrar no nosso grafo planar
         if not cruza:
-            # Se a aresta conecta partes isoladas (garante a conexidade)
             if union(u, v):
-                # Peso inteiro positivo (1 a 100, pode alterar se quiser)
                 arestas_finais.append((u, v, random.randint(1, 100))) 
             else:
-                # Se já estão conectados por outro caminho, adicionamos com base na 'densidade'
-                # para criar ciclos e não ser apenas uma árvore simples.
                 if random.random() < densidade:
                     arestas_finais.append((u, v, random.randint(1, 100)))
 
-    # 4. Atribuição dos Grupos (Garantindo no mínimo 1 por grupo)
+    # 4. Atribuição dos Grupos (Mínimo 1 por grupo)
     grupos = [-1] * num_nos
     nos_embaralhados = list(range(num_nos))
     random.shuffle(nos_embaralhados)
     
-    # Passo A: Um nó para cada grupo
     for g in range(num_grupos):
         grupos[nos_embaralhados[g]] = g
         
-    # Passo B: O restante dos nós entra em grupos aleatórios
     for i in range(num_grupos, num_nos):
         grupos[nos_embaralhados[i]] = random.randint(0, num_grupos - 1)
 
-    # 5. Escrever no formato esperado pelo seu código (C++)
+    # 5. Escrever no arquivo txt
     with open(arquivo_saida, 'w') as f:
-        # Cabecalho: NumNos NumArestas NumGrupos
         f.write(f"{num_nos} {len(arestas_finais)} {num_grupos}\n")
-        
-        # Nós e seus grupos
-        # Ordenados pelo ID do nó para ficar organizado
         for i in range(num_nos):
             f.write(f"{i} {grupos[i]}\n")
-            
-        # Arestas
         for u, v, peso in arestas_finais:
-            # Salvando como peso.0 (float) para casar perfeitamente com sua estrutura C++
             f.write(f"{u} {v} {float(peso)}\n")
             
     print(f"Sucesso! Instância '{arquivo_saida}' gerada.")
-    print(f" -> Nós: {num_nos} | Arestas: {len(arestas_finais)} | Grupos: {num_grupos}")
+
+    # ==========================================
+    # 6. GERAR E SALVAR A REPRESENTAÇÃO GRÁFICA
+    # ==========================================
+    plt.figure(figsize=(10, 8))
+    
+    # Desenhar as arestas em cinza claro
+    for u, v, _ in arestas_finais:
+        x_vals = [pontos[u][0], pontos[v][0]]
+        y_vals = [pontos[u][1], pontos[v][1]]
+        plt.plot(x_vals, y_vals, color='gray', linestyle='-', linewidth=1.0, alpha=0.6, zorder=1)
+    
+    cmap = plt.get_cmap('tab20')
+    
+    # Desenhar os nós
+    for i in range(num_nos):
+        g = grupos[i]
+        cor = cmap(g % 20)
+        plt.scatter(pontos[i][0], pontos[i][1], color=cor, s=80, edgecolors='black', zorder=5)
+
+    # --- CRIAR A LEGENDA DOS GRUPOS ---
+    legend_patches = []
+    for g in range(num_grupos):
+        cor = cmap(g % 20)
+        # Cria um "retângulo de cor" para a legenda
+        patch = mpatches.Patch(color=cor, label=f'Grupo {g}')
+        legend_patches.append(patch)
+        
+    # Posiciona a legenda no canto superior direito, do lado de fora do gráfico
+    plt.legend(handles=legend_patches, title="Legenda", loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
+
+    # Título com as informações básicas
+    plt.title(f"Arquivo: {arquivo_saida}\nNós: {num_nos} | Grupos: {num_grupos} | Densidade: {densidade}", fontsize=14, fontweight='bold', pad=15)
+    
+    plt.axis('off')
+    
+    # O bbox_inches='tight' garante que a legenda externa não seja cortada na imagem salva
+    nome_imagem = arquivo_saida.replace('.txt', '.png')
+    plt.savefig(nome_imagem, bbox_inches='tight', dpi=150)
+    plt.close()
+    
+    print(f"Gráfico representativo salvo como: '{nome_imagem}'")
+
 
 if __name__ == "__main__":
-    # --- VOCÊ PODE ALTERAR OS PARÂMETROS AQUI ---
-    
-    QTD_NOS = 50           # Quantidade total de vértices
-    QTD_GRUPOS = 7         # Quantidade total de grupos 
-    DENSIDADE = 0.5        # De 0.0 (Apenas uma Árvore) até 1.0 (Máximo de arestas sem cruzar)
+    # --- PARÂMETROS ---
+    QTD_NOS = 50           
+    QTD_GRUPOS = 5         
+    DENSIDADE = 0.4        
     NOME_ARQUIVO = "instancia_teste.txt"
     
     gerar_instancia(QTD_NOS, QTD_GRUPOS, DENSIDADE, NOME_ARQUIVO)

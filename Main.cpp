@@ -207,15 +207,21 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    std::cout << "\nAlgoritmo | Melhor Custo | Custo Medio | Tempo Medio (ms) | GAP Medio (%)\n";
-    std::cout << "----------|--------------|------------|-----------------|-------------\n";
+    std::cout << "\n"
+              << std::left << std::setw(10) << "Algoritmo" << "| "
+              << std::right << std::setw(12) << "Melhor Custo" << " | "
+              << std::setw(11) << "Custo Medio" << " | "
+              << std::setw(16) << "Tempo Medio (ms)" << " | "
+              << std::setw(13) << "GAP Medio (%)" << "\n";
+    std::cout << "----------+--------------+-------------+------------------+--------------\n";
     
     for (const auto& stat : stats) {
-        std::cout << std::left << std::setw(9) << stat.nome << "| "
-                  << std::fixed << std::setprecision(2) << std::setw(12) << stat.custoMelhor << "| "
-                  << std::setw(10) << stat.custoMedio << "| "
-                  << std::setw(15) << stat.tempoMedio << "| "
-                  << std::setw(11) << stat.gapMedio << "\n";
+        std::cout << std::left << std::setw(10) << stat.nome << "| "
+                  << std::right << std::fixed << std::setprecision(2) 
+                  << std::setw(12) << stat.custoMelhor << " | "
+                  << std::setw(11) << stat.custoMedio << " | "
+                  << std::setw(16) << stat.tempoMedio << " | "
+                  << std::setw(13) << stat.gapMedio << "\n";
     }
     
     exportarCSV(nomeInstancia, todosOsResultados, otimoCOnhecido);

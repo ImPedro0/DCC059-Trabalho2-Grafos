@@ -1,3 +1,4 @@
+import os
 import math
 import random
 import matplotlib.pyplot as plt
@@ -82,6 +83,13 @@ def gerar_instancia(num_nos, num_grupos, densidade, arquivo_saida):
             
     print(f"Sucesso! Instância '{arquivo_saida}' gerada.")
 
+    # Salvar as coordenadas para o plotador
+    arquivo_coords = arquivo_saida.replace('.txt', '_coords.txt')
+    with open(arquivo_coords, 'w') as f:
+        for x, y in pontos:
+            f.write(f"{x} {y}\n")
+            
+
     # ==========================================
     # 6. GERAR E SALVAR A REPRESENTAÇÃO GRÁFICA
     # ==========================================
@@ -126,10 +134,24 @@ def gerar_instancia(num_nos, num_grupos, densidade, arquivo_saida):
 
 
 if __name__ == "__main__":
+    import os # Permite criar pastas no sistema
+    
     # --- PARÂMETROS ---
     QTD_NOS = 50           
     QTD_GRUPOS = 5         
     DENSIDADE = 0.4        
-    NOME_ARQUIVO = "instancia_teste.txt"
     
-    gerar_instancia(QTD_NOS, QTD_GRUPOS, DENSIDADE, NOME_ARQUIVO)
+    # Apenas o nome da instância (sem o .txt)
+    NOME_INSTANCIA = "grafo_teste_50_nos"
+    
+    if not os.path.exists('instancias'):
+        os.makedirs('instancias')
+        
+    pasta_destino = os.path.join('instancias', NOME_INSTANCIA)
+    if not os.path.exists(pasta_destino):
+        os.makedirs(pasta_destino)
+        
+    arquivo_saida = os.path.join(pasta_destino, f"{NOME_INSTANCIA}.txt")
+    
+    # Roda o gerador salvando tudo dentro da nova pasta
+    gerar_instancia(QTD_NOS, QTD_GRUPOS, DENSIDADE, arquivo_saida)

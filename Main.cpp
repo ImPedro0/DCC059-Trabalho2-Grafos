@@ -102,6 +102,9 @@ int main(int argc, char* argv[]) {
     int tamanhoBloco = 50;
 
     std::vector<ResultadoCompleto> todosOsResultados;
+    Solucao melhorSolucaoGlobal;
+    melhorSolucaoGlobal.custoTotal = 1e9; // Inicializa com infinito
+    
     
     int NUM_REPETICOES = 10;
     
@@ -126,6 +129,7 @@ int main(int argc, char* argv[]) {
         resGuloso.parametros = "N/A";
         resGuloso.gap = calcularGap(solGuloso.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resGuloso);
+        if (solGuloso.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGuloso;
         
         std::cout << "  [Guloso] Custo: " << solGuloso.custoTotal 
                   << ", Tempo: " << tempoGuloso << "ms, GAP: " << resGuloso.gap << "%\n";
@@ -146,6 +150,7 @@ int main(int argc, char* argv[]) {
         resGRASP.parametros = "alpha=" + std::to_string(alpha) + ",iter=" + std::to_string(iteracoesGRASP);
         resGRASP.gap = calcularGap(solGRASP.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resGRASP);
+        if (solGRASP.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGRASP;
         
         std::cout << "  [GRASP] Custo: " << solGRASP.custoTotal 
                   << ", Tempo: " << tempoGRASP << "ms, GAP: " << resGRASP.gap << "%\n";
@@ -166,6 +171,7 @@ int main(int argc, char* argv[]) {
         resReativo.parametros = "iter=" + std::to_string(iteracoesReativo) + ",bloco=" + std::to_string(tamanhoBloco);
         resReativo.gap = calcularGap(solReativo.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resReativo);
+        if (solReativo.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solReativo;
         
         std::cout << "  [Reativo] Custo: " << solReativo.custoTotal 
                   << ", Tempo: " << tempoReativo << "ms, GAP: " << resReativo.gap << "%\n";
@@ -225,6 +231,21 @@ int main(int argc, char* argv[]) {
     }
     
     exportarCSV(nomeInstancia, todosOsResultados, otimoCOnhecido);
+    
+    // EXPORTAR A MELHOR SOLUÇÃO ENCONTRADA
+    std::string arquivoSolucao = caminhoArquivo.substr(0, caminhoArquivo.find_last_of('.')) + "_solucao.txt";
+    std::ofstream outSol(arquivoSolucao);
+    if(outSol.is_open()) {
+        for(const auto& ar : melhorSolucaoGlobal.arestas) {
+            outSol << ar.origem << " " << ar.destino << "\n";
+        }
+        outSol.close();
+        std::cout << " Melhor solucao exportada para " << arquivoSolucao << "\n";
+        
+        std::cout << " Gerando grafico da solucao automaticamente...\n";
+        std::string comando = "python plotar_solucao.py " + caminhoArquivo;
+        system(comando.c_str());
+    }
     
     delete grafo;
     

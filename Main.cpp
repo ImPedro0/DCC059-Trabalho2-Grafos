@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <ctime>
+#include <sstream>
 #include "Grafo.hpp"
 #include "Algoritmos.hpp"
 
@@ -53,7 +54,7 @@ void exportarCSV(const std::string& nomeInstancia,
     }
     
     arquivo.close();
-    std::cout << "\n✓ Resultados exportados para " << nomeArquivo << "\n";
+    std::cout << "\n Resultados exportados para " << nomeArquivo << "\n";
 }
 
 double calcularGap(double custo, double otimo) {
@@ -90,7 +91,7 @@ int main(int argc, char* argv[]) {
     std::string nomeInstancia = extrairNomeArquivo(caminhoArquivo);
     std::cout << "=== TESTE DO PROGRAMA AGMG ===\n";
     std::cout << "Instancia: " << nomeInstancia << "\n";
-    std::cout << "Grafo processado! Nós: " << grafo->getNumNos() 
+    std::cout << "Grafo processado! Nos: " << grafo->getNumNos() 
               << ", Grupos: " << grafo->getNumGrupos() << "\n";
     std::cout << "Otimo Conhecido: " << otimoCOnhecido << "\n";
     std::cout << "Semente Base: " << sementeBase << "\n\n";
@@ -101,11 +102,14 @@ int main(int argc, char* argv[]) {
     int tamanhoBloco = 50;
 
     std::vector<ResultadoCompleto> todosOsResultados;
+    Solucao melhorSolucaoGlobal;
+    melhorSolucaoGlobal.custoTotal = 1e9; // Inicializa com infinito
+    
     
     int NUM_REPETICOES = 10;
     
     for (int rep = 1; rep <= NUM_REPETICOES; ++rep) {
-        std::cout << "\n=== REPETIÇÃO " << rep << "/" << NUM_REPETICOES << " ===\n";
+        std::cout << "\n=== REPETICAO " << rep << "/" << NUM_REPETICOES << " ===\n";
         
         unsigned int sementeDaIteracao = geradorSementes();
         std::cout << "Semente da Iteracao: " << sementeDaIteracao << "\n";
@@ -125,6 +129,7 @@ int main(int argc, char* argv[]) {
         resGuloso.parametros = "N/A";
         resGuloso.gap = calcularGap(solGuloso.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resGuloso);
+        if (solGuloso.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGuloso;
         
         std::cout << "  [Guloso] Custo: " << solGuloso.custoTotal 
                   << ", Tempo: " << tempoGuloso << "ms, GAP: " << resGuloso.gap << "%\n";
@@ -145,6 +150,7 @@ int main(int argc, char* argv[]) {
         resGRASP.parametros = "alpha=" + std::to_string(alpha) + ",iter=" + std::to_string(iteracoesGRASP);
         resGRASP.gap = calcularGap(solGRASP.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resGRASP);
+        if (solGRASP.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGRASP;
         
         std::cout << "  [GRASP] Custo: " << solGRASP.custoTotal 
                   << ", Tempo: " << tempoGRASP << "ms, GAP: " << resGRASP.gap << "%\n";
@@ -165,12 +171,13 @@ int main(int argc, char* argv[]) {
         resReativo.parametros = "iter=" + std::to_string(iteracoesReativo) + ",bloco=" + std::to_string(tamanhoBloco);
         resReativo.gap = calcularGap(solReativo.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resReativo);
+        if (solReativo.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solReativo;
         
         std::cout << "  [Reativo] Custo: " << solReativo.custoTotal 
                   << ", Tempo: " << tempoReativo << "ms, GAP: " << resReativo.gap << "%\n";
     }
     
-    std::cout << "\n\n=== ESTATÍSTICAS FINAIS ===\n";
+    std::cout << "\n\n=== ESTATISTICAS FINAIS ===\n";
     
     struct EstatisticasAlgoritmo {
         std::string nome;
@@ -206,21 +213,42 @@ int main(int argc, char* argv[]) {
         }
     }
     
-    std::cout << "\nAlgoritmo | Melhor Custo | Custo Medio | Tempo Medio (ms) | GAP Medio (%)\n";
-    std::cout << "----------|--------------|------------|-----------------|-------------\n";
+    std::cout << "\n"
+              << std::left << std::setw(10) << "Algoritmo" << "| "
+              << std::right << std::setw(12) << "Melhor Custo" << " | "
+              << std::setw(11) << "Custo Medio" << " | "
+              << std::setw(16) << "Tempo Medio (ms)" << " | "
+              << std::setw(13) << "GAP Medio (%)" << "\n";
+    std::cout << "----------+--------------+-------------+------------------+--------------\n";
     
     for (const auto& stat : stats) {
-        std::cout << std::left << std::setw(9) << stat.nome << "| "
-                  << std::fixed << std::setprecision(2) << std::setw(12) << stat.custoMelhor << "| "
-                  << std::setw(10) << stat.custoMedio << "| "
-                  << std::setw(15) << stat.tempoMedio << "| "
-                  << std::setw(11) << stat.gapMedio << "\n";
+        std::cout << std::left << std::setw(10) << stat.nome << "| "
+                  << std::right << std::fixed << std::setprecision(2) 
+                  << std::setw(12) << stat.custoMelhor << " | "
+                  << std::setw(11) << stat.custoMedio << " | "
+                  << std::setw(16) << stat.tempoMedio << " | "
+                  << std::setw(13) << stat.gapMedio << "\n";
     }
     
     exportarCSV(nomeInstancia, todosOsResultados, otimoCOnhecido);
     
+    // EXPORTAR A MELHOR SOLUÇÃO ENCONTRADA
+    std::string arquivoSolucao = caminhoArquivo.substr(0, caminhoArquivo.find_last_of('.')) + "_solucao.txt";
+    std::ofstream outSol(arquivoSolucao);
+    if(outSol.is_open()) {
+        for(const auto& ar : melhorSolucaoGlobal.arestas) {
+            outSol << ar.origem << " " << ar.destino << "\n";
+        }
+        outSol.close();
+        std::cout << " Melhor solucao exportada para " << arquivoSolucao << "\n";
+        
+        std::cout << " Gerando grafico da solucao automaticamente...\n";
+        std::string comando = "python plotar_solucao.py " + caminhoArquivo;
+        system(comando.c_str());
+    }
+    
     delete grafo;
     
-    std::cout << "\n✓ Teste concluído com sucesso!\n";
+    std::cout << "\n Teste concluido com sucesso!\n";
     return 0;
 }

@@ -5,8 +5,7 @@
 #include <vector>
 #include <cstdlib>
 
-// Se alpha == 0.0, se comporta como Algoritmo Guloso clássico.
-
+// Se alpha == 0.0, se comporta como Algoritmo Guloso clássico (100% determinístico e sem consumir rand())
 Solucao construirSolucaoGRASP(const Grafo& grafo, double alpha) {
     Solucao solucao;
     solucao.custoTotal = 0.0;
@@ -22,13 +21,14 @@ Solucao construirSolucaoGRASP(const Grafo& grafo, double alpha) {
     std::vector<bool> gruposVisitados(numGrupos, false);
     std::vector<int> nosNaArvore;
 
-    // Início aleatório
+    // Início aleatório ou fixo, dependendo do alpha
     int noInicial;
 
-    if(alpha == 0.0)
-        noInicial = 0;
-    else
+    if(alpha == 0.0) {
+        noInicial = 0; // Determinístico: não chama rand()
+    } else {
         noInicial = rand() % numNos;
+    }
         
     int grupoInicial = grafo.getGrupo(noInicial);
 
@@ -42,6 +42,7 @@ Solucao construirSolucaoGRASP(const Grafo& grafo, double alpha) {
         double cMin = std::numeric_limits<double>::max();
         double cMax = std::numeric_limits<double>::lowest();
 
+        // 1. Levantar todas as arestas que conectam a árvore a um grupo novo
         for (int u : nosNaArvore) {
             const std::vector<Aresta>& vizinhos = grafo.getAdjacentes(u);
             for (const Aresta& aresta : vizinhos) {
@@ -61,8 +62,10 @@ Solucao construirSolucaoGRASP(const Grafo& grafo, double alpha) {
             return solucao;
         }
 
+        // 2. Calcular o limite de custo para a LRC
         double limite = cMin + alpha * (cMax - cMin);
 
+        // 3. Preencher a Lista Restrita de Candidatos (LRC)
         std::vector<Aresta> lrc;
         for (const Aresta& c : candidatas) {
             if (c.peso <= limite + 1e-9) { 
@@ -70,9 +73,17 @@ Solucao construirSolucaoGRASP(const Grafo& grafo, double alpha) {
             }
         }
 
-        int idxSorteado = rand() % lrc.size();
+        // 4. Selecionar da LRC
+        int idxSorteado = 0; // Por padrão, pega o primeiro (determinístico)
+        
+        // SÓ CHAMA O RAND() SE FOR GRASP/REATIVO (alpha > 0)
+        if (alpha > 0.0) {
+            idxSorteado = rand() % lrc.size();
+        }
+        
         Aresta escolhida = lrc[idxSorteado];
 
+        // 5. Atualizar a solução
         solucao.arestas.push_back(escolhida);
         solucao.custoTotal += escolhida.peso;
         nosNaArvore.push_back(escolhida.destino);

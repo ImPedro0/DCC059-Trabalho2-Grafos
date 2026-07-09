@@ -71,5 +71,5 @@ O repositório conta um scripts extras escritos em Python. Para executá-los, é
 Cria instâncias planares garantindo que o grafo seja conexo.
 ```bash
 pip install matplotlib
-python gerador.py
+py gerador.py
 ```

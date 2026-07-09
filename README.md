@@ -3,10 +3,12 @@
 Este projeto implementa soluções heurísticas baseadas em **GRASP** (Guloso, Guloso Randomizado e Guloso Randomizado Reativo) para resolver um problema de Otimização Combinatória em Grafos (conectar diferentes grupos minimizando o custo total).
 
 ## 🚀 Estrutura do Projeto
-- `Main.cpp`: Arquivo principal, gerencia os testes, controle de seeds e logs (CSV).
+- `Main.cpp`: Arquivo principal, gerencia os testes, exportação da solução e logs (CSV).
 - `Grafo.hpp` / `Grafo.cpp`: Estrutura de dados do grafo e leitura de instâncias.
 - `Algoritmos.hpp` / `Algoritmos.cpp`: Implementação dos métodos construtivos (Guloso, GRASP, Reativo).
-- `gerador.py`: Script gerador de instâncias planares (com representação gráfica).
+- `instancias/`: Diretório onde cada instância ganha sua própria pasta, organizando arquivos de texto, coordenadas e imagens geradas.
+- `gerador.py`: Script gerador de instâncias planares e organizador de pastas.
+- `plotar_solucao.py`: Script chamado automaticamente pelo programa C++ para desenhar a resposta (o melhor caminho em vermelho) após o teste.
 - `gerador_pptx.py`: Script automatizado para geração dos slides da apresentação.
 
 ---
@@ -34,42 +36,40 @@ g++ Main.cpp Grafo.cpp Algoritmos.cpp -o trabalho2.exe
 ## ▶️ Como Executar o Programa
 
 O programa pode receber até 3 parâmetros via linha de comando:
-1. `Caminho da Instancia` (Padrão: *instancia.txt*)
+1. `Caminho da Instancia` (Obrigatório caso queira testar uma instância específica gerada)
 2. `Custo Ótimo Conhecido` (Padrão: *5.0*)
 3. `Seed / Semente` (Opcional. Se não informada, usa a data/hora do sistema).
 
 ### Executando no Linux
-**1. Execução Padrão (usa instância padrão e gera seed aleatória):**
 ```bash
-./trabalho2.out
-```
-**2. Execução passando os 3 parâmetros:**
-```bash
-./trabalho2.out instancia_teste.txt 12.5 12345
+./trabalho2.out instancias/grafo1/grafo1.txt 12.5 12345
 ```
 
 ### Executando no Windows
-**1. Execução Padrão (usa instância padrão e gera seed aleatória):**
 ```cmd
-.\trabalho2.exe
-```
-**2. Execução passando os 3 parâmetros:**
-```cmd
-.\trabalho2.exe instancia_teste.txt 12.5 12345
+.\trabalho2.exe instancias\grafo1\grafo1.txt 12.5 12345
 ```
 
-> **Nota sobre a Saída:** 
-> Após a execução, o programa exibirá as estatísticas no console e salvará (ou atualizará) o arquivo `resultados.csv` contendo os custos, tempos, GAP e seeds usadas, facilitando a elaboração do relatório final.
+> **Notas sobre a Saída Final:** 
+> 1. O arquivo `resultados.csv` será atualizado com os tempos, custos e GAPs testados.
+> 2. O programa chamará o Python sozinho para criar uma imagem `.png` mostrando o melhor caminho encontrado. Essa imagem ficará salva na mesma pasta da instância testada!
 
 ---
 
 ## 🐍 Utilitários em Python
 
-O repositório conta um scripts extras escritos em Python. Para executá-los, é necessário ter o Python instalado e as bibliotecas listadas abaixo.
+O repositório conta com scripts extras escritos em Python para automatizar tarefas secundárias. É necessário ter o Python instalado com algumas bibliotecas:
 
-**Gerador de Instâncias e Gráficos 2D**
-Cria instâncias planares garantindo que o grafo seja conexo.
+### Instalação de Dependências
 ```bash
 pip install matplotlib
-py gerador.py
 ```
+
+### 1. Gerador de Instâncias (`gerador.py`)
+Gera instâncias planas e conexas prontas para testes. Ele cria a pasta `instancias/` e gera subdiretórios individuais contendo os vértices, arestas e coordenadas físicas.
+```bash
+python gerador.py
+```
+
+### 2. Plotador de Solução (`plotar_solucao.py`)
+**Você não precisa executar este script manualmente!** Ele é acionado por baixo dos panos na execução final do `Main.cpp`. Ele cruza o melhor resultado do C++ com as coordenadas 2D e renderiza o caminho traçado pelo GRASP.

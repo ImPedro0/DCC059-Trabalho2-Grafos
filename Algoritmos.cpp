@@ -107,9 +107,14 @@ Solucao algoritmoGulosoRandomizado(const Grafo& grafo, double alpha, int numIter
     Solucao melhorSolucao;
     melhorSolucao.custoTotal = std::numeric_limits<double>::max();
 
+    std::vector<double> alphas = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
     for (int iter = 0; iter < numIteracoes; ++iter) {
-        Solucao solAtual = construirSolucaoGRASP(grafo, alpha);
         
+        int idx = rand() % alphas.size();
+        double alpha = alphas[idx];
+
+        Solucao solAtual = construirSolucaoGRASP(grafo, alpha);
+
         if (solAtual.custoTotal < melhorSolucao.custoTotal) {
             melhorSolucao = solAtual;
         }

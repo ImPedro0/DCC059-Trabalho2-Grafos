@@ -21,115 +21,92 @@ Solucao construirSolucaoGRASP(const Grafo &grafo, double alpha)
     }
 
     std::vector<bool> gruposVisitados(numGrupos, false);
-    std::vector<int> nosNaArvore;
+    // NOVA REGRA: Rastrear quais nós estão na árvore
+    std::vector<bool> nosNaArvore(numNos, false);
 
     // Início aleatório, controlado pela semente atual
-    // Mesmo para Guloso (alpha == 0.0), permite variação determinística por semente
     int noInicial = rand() % numNos;
-
     int grupoInicial = grafo.getGrupo(noInicial);
 
     gruposVisitados[grupoInicial] = true;
-    nosNaArvore.push_back(noInicial);
+    nosNaArvore[noInicial] = true;
 
     int gruposConectados = 1;
 
     while (gruposConectados < numGrupos)
     {
-        std::vector<Aresta> candidatas;
-        double cMin = std::numeric_limits<double>::max();
-        double cMax = std::numeric_limits<double>::lowest();
+        std::vector<Aresta> candidatasNovas;
+        std::vector<Aresta> candidatasPontes;
+        
+        double cMinNovas = std::numeric_limits<double>::max();
+        double cMaxNovas = std::numeric_limits<double>::lowest();
+        
+        double cMinPontes = std::numeric_limits<double>::max();
+        double cMaxPontes = std::numeric_limits<double>::lowest();
 
-        // 1. Levantar todas as arestas que conectam a árvore a um grupo novo
-        for (int u : nosNaArvore)
+        // 1. Levantar todas as arestas que SAEM da árvore
+        for (int u = 0; u < numNos; ++u)
         {
-            const std::vector<Aresta> &vizinhos = grafo.getAdjacentes(u);
-            for (const Aresta &aresta : vizinhos)
-            {
-                int v = aresta.destino;
-                int grupoDoDestino = grafo.getGrupo(v);
-
-                if (!gruposVisitados[grupoDoDestino])
-                {
-                    candidatas.push_back(aresta);
-                    if (aresta.peso < cMin)
-                        cMin = aresta.peso;
-                    if (aresta.peso > cMax)
-                        cMax = aresta.peso;
-                }
-            }
-        }
-
-        // Se não há candidatas diretas, encontra a melhor ponte através de qualquer nó
-        if (candidatas.empty())
-        {
-            Aresta melhorPonte;
-            melhorPonte.peso = std::numeric_limits<double>::max();
-            int grupoNovoAlvo = -1;
-
-            // Busca TODAS as arestas do grafo para encontrar a melhor connexão
-            // entre a árvore atual e qualquer grupo não visitado
-            for (int u : nosNaArvore)
+            if (nosNaArvore[u])
             {
                 const std::vector<Aresta> &vizinhos = grafo.getAdjacentes(u);
                 for (const Aresta &aresta : vizinhos)
                 {
                     int v = aresta.destino;
-                    int grupoDoDestino = grafo.getGrupo(v);
-
-                    // Procura por qualquer grupo não visitado, independente de já haver sido visitado intermediário
-                    if (!gruposVisitados[grupoDoDestino] && aresta.peso < melhorPonte.peso)
+                    
+                    if (!nosNaArvore[v]) // Aresta expande a árvore
                     {
-                        melhorPonte = aresta;
-                        grupoNovoAlvo = grupoDoDestino;
-                    }
-                }
-            }
-
-            // Se ainda não encontrou, tenta procurar entre TODOS os nós do grafo
-            if (grupoNovoAlvo == -1)
-            {
-                // Busca de última esperança: qualquer aresta que leve a um grupo não visitado
-                for (int u = 0; u < grafo.getNumNos(); ++u)
-                {
-                    const std::vector<Aresta> &vizinhos = grafo.getAdjacentes(u);
-                    for (const Aresta &aresta : vizinhos)
-                    {
-                        int v = aresta.destino;
                         int grupoDoDestino = grafo.getGrupo(v);
-                        int grupoDeOrigem = grafo.getGrupo(u);
-
-                        // Se a origem está visitada e o destino não, é candidato válido
-                        if (gruposVisitados[grupoDeOrigem] && !gruposVisitados[grupoDoDestino] && aresta.peso < melhorPonte.peso)
+                        
+                        if (!gruposVisitados[grupoDoDestino]) 
                         {
-                            melhorPonte = aresta;
-                            grupoNovoAlvo = grupoDoDestino;
+                            // Leva para um grupo inédito (Prioridade Máxima)
+                            candidatasNovas.push_back(aresta);
+                            if (aresta.peso < cMinNovas) cMinNovas = aresta.peso;
+                            if (aresta.peso > cMaxNovas) cMaxNovas = aresta.peso;
+                        } 
+                        else 
+                        {
+                            // Leva para um grupo repetido (Serve como Ponte)
+                            candidatasPontes.push_back(aresta);
+                            if (aresta.peso < cMinPontes) cMinPontes = aresta.peso;
+                            if (aresta.peso > cMaxPontes) cMaxPontes = aresta.peso;
                         }
                     }
                 }
             }
-
-            if (grupoNovoAlvo == -1)
-            {
-                // Nenhuma aresta encontrada - grafo realmente desconexo
-                solucao.custoTotal = std::numeric_limits<double>::max();
-                return solucao;
-            }
-
-            solucao.arestas.push_back(melhorPonte);
-            solucao.custoTotal += melhorPonte.peso;
-            nosNaArvore.push_back(melhorPonte.destino);
-            gruposVisitados[grupoNovoAlvo] = true;
-            gruposConectados++;
-            continue;
         }
 
-        // 2. Calcular o limite de custo para a LRC
+        // 2. Escolher qual lista usar (Priorizamos grupos novos!)
+        std::vector<Aresta>* listaBase = nullptr;
+        double cMin, cMax;
+
+        if (!candidatasNovas.empty())
+        {
+            listaBase = &candidatasNovas;
+            cMin = cMinNovas;
+            cMax = cMaxNovas;
+        }
+        else if (!candidatasPontes.empty())
+        {
+            // Beco sem saída! Somos obrigados a usar uma ponte para expandir a árvore.
+            listaBase = &candidatasPontes;
+            cMin = cMinPontes;
+            cMax = cMaxPontes;
+        }
+        else
+        {
+            // Grafo fisicamente desconexo
+            solucao.custoTotal = std::numeric_limits<double>::max();
+            return solucao;
+        }
+
+        // 3. Calcular o limite de custo para a LRC
         double limite = cMin + alpha * (cMax - cMin);
 
-        // 3. Preencher a Lista Restrita de Candidatos (LRC)
+        // 4. Preencher a Lista Restrita de Candidatos (LRC)
         std::vector<Aresta> lrc;
-        for (const Aresta &c : candidatas)
+        for (const Aresta &c : *listaBase)
         {
             if (c.peso <= limite + 1e-9)
             {
@@ -137,24 +114,28 @@ Solucao construirSolucaoGRASP(const Grafo &grafo, double alpha)
             }
         }
 
-        // 4. Selecionar da LRC
-        int idxSorteado = 0; // Por padrão, pega o primeiro (determinístico)
-
-        // SÓ CHAMA O RAND() SE FOR GRASP/REATIVO (alpha > 0)
+        // 5. Selecionar da LRC
+        int idxSorteado = 0; 
         if (alpha > 0.0)
         {
             idxSorteado = rand() % lrc.size();
         }
 
         Aresta escolhida = lrc[idxSorteado];
+        int v = escolhida.destino;
+        int grupoDoDestino = grafo.getGrupo(v);
 
-        // 5. Atualizar a solução
+        // 6. Atualizar a solução e conectar o nó fisicamente à árvore
         solucao.arestas.push_back(escolhida);
         solucao.custoTotal += escolhida.peso;
-        nosNaArvore.push_back(escolhida.destino);
-        gruposVisitados[grafo.getGrupo(escolhida.destino)] = true;
+        nosNaArvore[v] = true;
 
-        gruposConectados++;
+        // Se a ponte nos levou a um grupo novo, contabilizamos a conquista!
+        if (!gruposVisitados[grupoDoDestino])
+        {
+            gruposVisitados[grupoDoDestino] = true;
+            gruposConectados++;
+        }
     }
 
     return solucao;
@@ -197,12 +178,7 @@ Solucao algoritmoGulosoRandomizado(const Grafo &grafo, double alpha, int numIter
     Solucao melhorSolucao;
     melhorSolucao.custoTotal = std::numeric_limits<double>::max();
 
-    std::vector<double> alphas = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
     for (int iter = 0; iter < numIteracoes; ++iter) {
-        
-        int idx = rand() % alphas.size();
-        double alpha = alphas[idx];
-
         Solucao solAtual = construirSolucaoGRASP(grafo, alpha);
 
         if (solAtual.custoTotal < melhorSolucao.custoTotal) {

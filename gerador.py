@@ -137,12 +137,12 @@ if __name__ == "__main__":
     import os # Permite criar pastas no sistema
     
     # --- PARÂMETROS ---
-    QTD_NOS = 50           
-    QTD_GRUPOS = 5         
+    QTD_NOS = 100           
+    QTD_GRUPOS = 10         
     DENSIDADE = 0.4        
     
     # Apenas o nome da instância (sem o .txt)
-    NOME_INSTANCIA = "grafo_teste_50_nos"
+    NOME_INSTANCIA = "grafo3"
     
     if not os.path.exists('instancias'):
         os.makedirs('instancias')

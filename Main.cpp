@@ -15,7 +15,9 @@ struct ResultadoCompleto {
     double custoTotal;
     double tempoMs;
     unsigned int seed;
-    std::string parametros;
+    double alphaUsado;      
+    int numIteracoes;       
+    int tamanhoBloco;       
     double gap;
 };
 
@@ -33,7 +35,8 @@ void exportarCSV(const std::string& nomeInstancia,
     }
     
     if (!arquivoExiste) {
-        arquivo << "DataHora,Instancia,Algoritmo,Parametros,Seed,Custo,Tempo(ms),Gap(%)\n";
+        // Cabeçalho corrigido e padronizado
+        arquivo << "DataHora,Instancia,Algoritmo,Alpha,Iteracoes,TamanhoBloco,Seed,Custo,Tempo(ms),Gap(%)\n";
     }
     
     auto agora = std::chrono::system_clock::now();
@@ -46,7 +49,9 @@ void exportarCSV(const std::string& nomeInstancia,
         arquivo << dataHora << ","
                 << nomeInstancia << ","
                 << res.nomeAlgoritmo << ","
-                << res.parametros << ","
+                << std::fixed << std::setprecision(2) << res.alphaUsado << ","
+                << res.numIteracoes << ","
+                << res.tamanhoBloco << ","
                 << res.seed << ","
                 << std::fixed << std::setprecision(2) << res.custoTotal << ","
                 << res.tempoMs << ","
@@ -96,7 +101,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Otimo Conhecido: " << otimoCOnhecido << "\n";
     std::cout << "Semente Base: " << sementeBase << "\n\n";
     
-    double alpha = 0.3;
+    // Tres valores de alpha para GRASP
+    std::vector<double> alphasGRASP = {0.1, 0.3, 0.7};
     int iteracoesGRASP = 100;  
     int iteracoesReativo = 300;
     int tamanhoBloco = 50;
@@ -126,7 +132,9 @@ int main(int argc, char* argv[]) {
         resGuloso.custoTotal = solGuloso.custoTotal;
         resGuloso.tempoMs = tempoGuloso;
         resGuloso.seed = sementeDaIteracao;
-        resGuloso.parametros = "N/A";
+        resGuloso.alphaUsado = 0.0;
+        resGuloso.numIteracoes = 1;
+        resGuloso.tamanhoBloco = 0;
         resGuloso.gap = calcularGap(solGuloso.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resGuloso);
         if (solGuloso.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGuloso;
@@ -134,27 +142,32 @@ int main(int argc, char* argv[]) {
         std::cout << "  [Guloso] Custo: " << solGuloso.custoTotal 
                   << ", Tempo: " << tempoGuloso << "ms, GAP: " << resGuloso.gap << "%\n";
         
-        srand(sementeDaIteracao);
+        // Algoritmo GRASP - Testar com 3 valores de alpha
+        for (double alpha : alphasGRASP) {
+            srand(sementeDaIteracao);
+            
+            auto iniciGRASP = std::chrono::high_resolution_clock::now();
+            Solucao solGRASP = algoritmoGulosoRandomizado(*grafo, alpha, iteracoesGRASP);
+            auto fimGRASP = std::chrono::high_resolution_clock::now();
+            double tempoGRASP = std::chrono::duration<double, std::milli>(fimGRASP - iniciGRASP).count();
+            
+            ResultadoCompleto resGRASP;
+            resGRASP.nomeAlgoritmo = "GRASP";
+            resGRASP.custoTotal = solGRASP.custoTotal;
+            resGRASP.tempoMs = tempoGRASP;
+            resGRASP.seed = sementeDaIteracao;
+            resGRASP.alphaUsado = alpha;
+            resGRASP.numIteracoes = iteracoesGRASP;
+            resGRASP.tamanhoBloco = 0;
+            resGRASP.gap = calcularGap(solGRASP.custoTotal, otimoCOnhecido);
+            todosOsResultados.push_back(resGRASP);
+            if (solGRASP.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGRASP;
+            
+            std::cout << "  [GRASP alpha=" << alpha << "] Custo: " << solGRASP.custoTotal 
+                      << ", Tempo: " << tempoGRASP << "ms, GAP: " << resGRASP.gap << "%\n";
+        }
         
-        // Algoritmo Guloso Randomizado
-        auto iniciGRASP = std::chrono::high_resolution_clock::now();
-        Solucao solGRASP = algoritmoGulosoRandomizado(*grafo, alpha, iteracoesGRASP);
-        auto fimGRASP = std::chrono::high_resolution_clock::now();
-        double tempoGRASP = std::chrono::duration<double, std::milli>(fimGRASP - iniciGRASP).count();
-        
-        ResultadoCompleto resGRASP;
-        resGRASP.nomeAlgoritmo = "GRASP";
-        resGRASP.custoTotal = solGRASP.custoTotal;
-        resGRASP.tempoMs = tempoGRASP;
-        resGRASP.seed = sementeDaIteracao;
-        resGRASP.parametros = "alpha=" + std::to_string(alpha) + ",iter=" + std::to_string(iteracoesGRASP);
-        resGRASP.gap = calcularGap(solGRASP.custoTotal, otimoCOnhecido);
-        todosOsResultados.push_back(resGRASP);
-        if (solGRASP.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGRASP;
-        
-        std::cout << "  [GRASP] Custo: " << solGRASP.custoTotal 
-                  << ", Tempo: " << tempoGRASP << "ms, GAP: " << resGRASP.gap << "%\n";
-        
+        // === ALGORITMO REATIVO ===
         srand(sementeDaIteracao);
         
         // Algoritmo Guloso Randomizado Reativo
@@ -168,7 +181,9 @@ int main(int argc, char* argv[]) {
         resReativo.custoTotal = solReativo.custoTotal;
         resReativo.tempoMs = tempoReativo;
         resReativo.seed = sementeDaIteracao;
-        resReativo.parametros = "iter=" + std::to_string(iteracoesReativo) + ",bloco=" + std::to_string(tamanhoBloco);
+        resReativo.alphaUsado = 0.0; // Reativo usa pool adaptativo (veja tamanhoBloco)
+        resReativo.numIteracoes = iteracoesReativo;
+        resReativo.tamanhoBloco = tamanhoBloco;
         resReativo.gap = calcularGap(solReativo.custoTotal, otimoCOnhecido);
         todosOsResultados.push_back(resReativo);
         if (solReativo.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solReativo;

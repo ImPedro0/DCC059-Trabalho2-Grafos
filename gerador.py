@@ -139,10 +139,10 @@ if __name__ == "__main__":
     # --- PARÂMETROS ---
     QTD_NOS = 150           
     QTD_GRUPOS = 15         
-    DENSIDADE = 0.2        
+    DENSIDADE = 0.5        
     
     # Apenas o nome da instância (sem o .txt)
-    NOME_INSTANCIA = "grafo3"
+    NOME_INSTANCIA = "grafo5"
     
     if not os.path.exists('instancias'):
         os.makedirs('instancias')

@@ -21,10 +21,8 @@ Solucao construirSolucaoGRASP(const Grafo &grafo, double alpha)
     }
 
     std::vector<bool> gruposVisitados(numGrupos, false);
-    // NOVA REGRA: Rastrear quais nós estão na árvore
     std::vector<bool> nosNaArvore(numNos, false);
 
-    // Início aleatório, controlado pela semente atual
     int noInicial = rand() % numNos;
     int grupoInicial = grafo.getGrupo(noInicial);
 
@@ -54,20 +52,18 @@ Solucao construirSolucaoGRASP(const Grafo &grafo, double alpha)
                 {
                     int v = aresta.destino;
                     
-                    if (!nosNaArvore[v]) // Aresta expande a árvore
+                    if (!nosNaArvore[v])
                     {
                         int grupoDoDestino = grafo.getGrupo(v);
                         
                         if (!gruposVisitados[grupoDoDestino]) 
                         {
-                            // Leva para um grupo inédito (Prioridade Máxima)
                             candidatasNovas.push_back(aresta);
                             if (aresta.peso < cMinNovas) cMinNovas = aresta.peso;
                             if (aresta.peso > cMaxNovas) cMaxNovas = aresta.peso;
                         } 
                         else 
                         {
-                            // Leva para um grupo repetido (Serve como Ponte)
                             candidatasPontes.push_back(aresta);
                             if (aresta.peso < cMinPontes) cMinPontes = aresta.peso;
                             if (aresta.peso > cMaxPontes) cMaxPontes = aresta.peso;
@@ -89,7 +85,6 @@ Solucao construirSolucaoGRASP(const Grafo &grafo, double alpha)
         }
         else if (!candidatasPontes.empty())
         {
-            // Beco sem saída! Somos obrigados a usar uma ponte para expandir a árvore.
             listaBase = &candidatasPontes;
             cMin = cMinPontes;
             cMax = cMaxPontes;
@@ -130,7 +125,6 @@ Solucao construirSolucaoGRASP(const Grafo &grafo, double alpha)
         solucao.custoTotal += escolhida.peso;
         nosNaArvore[v] = true;
 
-        // Se a ponte nos levou a um grupo novo, contabilizamos a conquista!
         if (!gruposVisitados[grupoDoDestino])
         {
             gruposVisitados[grupoDoDestino] = true;
@@ -147,8 +141,6 @@ Solucao algoritmoGuloso(const Grafo &grafo)
     Solucao melhorSol;
     melhorSol.custoTotal = std::numeric_limits<double>::max();
     
-    // Tenta até metade dos nós (ou 20 tentativas) como pontos iniciais
-    // para encontrar uma solução válida que conecte todos os grupos
     int maxTentativas = std::min(20, (grafo.getNumNos() + 1) / 2);
     
     for (int tentativa = 0; tentativa < maxTentativas; ++tentativa)

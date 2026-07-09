@@ -243,7 +243,7 @@ int main(int argc, char* argv[]) {
         std::cout << " Melhor solucao exportada para " << arquivoSolucao << "\n";
         
         std::cout << " Gerando grafico da solucao automaticamente...\n";
-        std::string comando = "python plotar_solucao.py " + caminhoArquivo;
+        std::string comando = "py plotar_solucao.py \"" + caminhoArquivo + "\"";
         system(comando.c_str());
     }
     

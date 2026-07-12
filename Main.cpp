@@ -76,8 +76,27 @@ int main(int argc, char* argv[]) {
     std::string caminhoArquivo = "instancia.txt";
     if(argc > 1) caminhoArquivo = argv[1];
     
-    double otimoCOnhecido = 5.0;
+    double otimoCOnhecido = 1e9; // Inicializa com um valor muito alto (infinito)
     if(argc > 2) otimoCOnhecido = std::stod(argv[2]);
+
+    std::string arquivoSolucao = caminhoArquivo.substr(0, caminhoArquivo.find_last_of('.')) + "_solucao.txt";
+    
+    // 1. LER OTIMO SALVO ANTERIORMENTE NO ARQUIVO, SE EXISTIR
+    std::ifstream inSolInicial(arquivoSolucao);
+    if(inSolInicial.is_open()) {
+        std::string linha;
+        if(std::getline(inSolInicial, linha)) {
+            if(linha.find("Custo:") != std::string::npos) {
+                try {
+                    double custoAntigo = std::stod(linha.substr(linha.find(":") + 1));
+                    if(custoAntigo < otimoCOnhecido) {
+                        otimoCOnhecido = custoAntigo;
+                    }
+                } catch(...) {}
+            }
+        }
+        inSolInicial.close();
+    }
 
     unsigned int sementeBase;
     if (argc > 3) {
@@ -98,11 +117,11 @@ int main(int argc, char* argv[]) {
     std::cout << "Instancia: " << nomeInstancia << "\n";
     std::cout << "Grafo processado! Nos: " << grafo->getNumNos() 
               << ", Grupos: " << grafo->getNumGrupos() << "\n";
-    std::cout << "Otimo Conhecido: " << otimoCOnhecido << "\n";
+    std::cout << "Otimo Conhecido Inicial (Parametro ou TXT): " << otimoCOnhecido << "\n";
     std::cout << "Semente Base: " << sementeBase << "\n\n";
     
     // Tres valores de alpha para GRASP
-    std::vector<double> alphasGRASP = {0.1, 0.3, 0.7};
+    std::vector<double> alphasGRASP = {0.1, 0.3, 0.5};
     int iteracoesGRASP = 100;  
     int iteracoesReativo = 300;
     int tamanhoBloco = 50;
@@ -119,13 +138,16 @@ int main(int argc, char* argv[]) {
         
         unsigned int sementeDaIteracao = geradorSementes();
         std::cout << "Semente da Iteracao: " << sementeDaIteracao << "\n";
-        srand(sementeDaIteracao);
         
-        // Algoritmo Guloso
+        // --- Algoritmo Guloso ---
+        srand(sementeDaIteracao);
         auto iniciGuloso = std::chrono::high_resolution_clock::now();
         Solucao solGuloso = algoritmoGuloso(*grafo);
         auto fimGuloso = std::chrono::high_resolution_clock::now();
         double tempoGuloso = std::chrono::duration<double, std::milli>(fimGuloso - iniciGuloso).count();
+        
+        if (solGuloso.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGuloso;
+        if (solGuloso.custoTotal < otimoCOnhecido) otimoCOnhecido = solGuloso.custoTotal;
         
         ResultadoCompleto resGuloso;
         resGuloso.nomeAlgoritmo = "Guloso";
@@ -135,46 +157,49 @@ int main(int argc, char* argv[]) {
         resGuloso.alphaUsado = 0.0;
         resGuloso.numIteracoes = 1;
         resGuloso.tamanhoBloco = 0;
-        resGuloso.gap = calcularGap(solGuloso.custoTotal, otimoCOnhecido);
+        resGuloso.gap = 0.0; // Sera recalculado no final
         todosOsResultados.push_back(resGuloso);
-        if (solGuloso.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGuloso;
         
         std::cout << "  [Guloso] Custo: " << solGuloso.custoTotal 
-                  << ", Tempo: " << tempoGuloso << "ms, GAP: " << resGuloso.gap << "%\n";
+                  << ", Tempo: " << tempoGuloso << "ms, GAP Momentaneo: " << calcularGap(solGuloso.custoTotal, otimoCOnhecido) << "%\n";
         
-        // Algoritmo GRASP - Testar com 3 valores de alpha
-        for (double alpha : alphasGRASP) {
-            srand(sementeDaIteracao);
-            
-            auto iniciGRASP = std::chrono::high_resolution_clock::now();
-            Solucao solGRASP = algoritmoGulosoRandomizado(*grafo, alpha, iteracoesGRASP);
-            auto fimGRASP = std::chrono::high_resolution_clock::now();
-            double tempoGRASP = std::chrono::duration<double, std::milli>(fimGRASP - iniciGRASP).count();
-            
-            ResultadoCompleto resGRASP;
-            resGRASP.nomeAlgoritmo = "GRASP";
-            resGRASP.custoTotal = solGRASP.custoTotal;
-            resGRASP.tempoMs = tempoGRASP;
-            resGRASP.seed = sementeDaIteracao;
-            resGRASP.alphaUsado = alpha;
-            resGRASP.numIteracoes = iteracoesGRASP;
-            resGRASP.tamanhoBloco = 0;
-            resGRASP.gap = calcularGap(solGRASP.custoTotal, otimoCOnhecido);
-            todosOsResultados.push_back(resGRASP);
-            if (solGRASP.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGRASP;
-            
-            std::cout << "  [GRASP alpha=" << alpha << "] Custo: " << solGRASP.custoTotal 
-                      << ", Tempo: " << tempoGRASP << "ms, GAP: " << resGRASP.gap << "%\n";
-        }
+        // --- Algoritmo GRASP ---
+        srand(sementeDaIteracao);
+        int indiceSorteado = rand() % alphasGRASP.size();
+        double alpha = alphasGRASP[indiceSorteado];
         
-        // === ALGORITMO REATIVO ===
+        auto iniciGRASP = std::chrono::high_resolution_clock::now();
+        Solucao solGRASP = algoritmoGulosoRandomizado(*grafo, alpha, iteracoesGRASP);
+        auto fimGRASP = std::chrono::high_resolution_clock::now();
+        double tempoGRASP = std::chrono::duration<double, std::milli>(fimGRASP - iniciGRASP).count();
+        
+        if (solGRASP.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solGRASP;
+        if (solGRASP.custoTotal < otimoCOnhecido) otimoCOnhecido = solGRASP.custoTotal;
+        
+        ResultadoCompleto resGRASP;
+        resGRASP.nomeAlgoritmo = "GRASP";
+        resGRASP.custoTotal = solGRASP.custoTotal;
+        resGRASP.tempoMs = tempoGRASP;
+        resGRASP.seed = sementeDaIteracao;
+        resGRASP.alphaUsado = alpha;
+        resGRASP.numIteracoes = iteracoesGRASP;
+        resGRASP.tamanhoBloco = 0;
+        resGRASP.gap = 0.0; // Sera recalculado no final
+        todosOsResultados.push_back(resGRASP);
+        
+        std::cout << "  [GRASP alpha=" << alpha << "] Custo: " << solGRASP.custoTotal 
+                  << ", Tempo: " << tempoGRASP << "ms, GAP Momentaneo: " << calcularGap(solGRASP.custoTotal, otimoCOnhecido) << "%\n";
+        
+        // --- ALGORITMO REATIVO ---
         srand(sementeDaIteracao);
         
-        // Algoritmo Guloso Randomizado Reativo
         auto iniciReativo = std::chrono::high_resolution_clock::now();
         Solucao solReativo = algoritmoGulosoRandomizadoReativo(*grafo, iteracoesReativo, tamanhoBloco);
         auto fimReativo = std::chrono::high_resolution_clock::now();
         double tempoReativo = std::chrono::duration<double, std::milli>(fimReativo - iniciReativo).count();
+        
+        if (solReativo.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solReativo;
+        if (solReativo.custoTotal < otimoCOnhecido) otimoCOnhecido = solReativo.custoTotal;
         
         ResultadoCompleto resReativo;
         resReativo.nomeAlgoritmo = "Reativo";
@@ -184,15 +209,19 @@ int main(int argc, char* argv[]) {
         resReativo.alphaUsado = 0.0; // Reativo usa pool adaptativo (veja tamanhoBloco)
         resReativo.numIteracoes = iteracoesReativo;
         resReativo.tamanhoBloco = tamanhoBloco;
-        resReativo.gap = calcularGap(solReativo.custoTotal, otimoCOnhecido);
+        resReativo.gap = 0.0; // Sera recalculado no final
         todosOsResultados.push_back(resReativo);
-        if (solReativo.custoTotal < melhorSolucaoGlobal.custoTotal) melhorSolucaoGlobal = solReativo;
         
         std::cout << "  [Reativo] Custo: " << solReativo.custoTotal 
-                  << ", Tempo: " << tempoReativo << "ms, GAP: " << resReativo.gap << "%\n";
+                  << ", Tempo: " << tempoReativo << "ms, GAP Momentaneo: " << calcularGap(solReativo.custoTotal, otimoCOnhecido) << "%\n";
     }
     
-    std::cout << "\n\n=== ESTATISTICAS FINAIS ===\n";
+    // 2. RECALCULAR O GAP DE TODOS OS RESULTADOS USANDO O MELHOR OTIMO GLOBAL DEFINITIVO
+    for (auto& res : todosOsResultados) {
+        res.gap = calcularGap(res.custoTotal, otimoCOnhecido);
+    }
+    
+    std::cout << "\n\n=== ESTATISTICAS FINAIS (Usando Otimo = " << otimoCOnhecido << ") ===\n";
     
     struct EstatisticasAlgoritmo {
         std::string nome;
@@ -248,18 +277,39 @@ int main(int argc, char* argv[]) {
     exportarCSV(nomeInstancia, todosOsResultados, otimoCOnhecido);
     
     // EXPORTAR A MELHOR SOLUÇÃO ENCONTRADA
-    std::string arquivoSolucao = caminhoArquivo.substr(0, caminhoArquivo.find_last_of('.')) + "_solucao.txt";
-    std::ofstream outSol(arquivoSolucao);
-    if(outSol.is_open()) {
-        for(const auto& ar : melhorSolucaoGlobal.arestas) {
-            outSol << ar.origem << " " << ar.destino << "\n";
+    bool deveAtualizar = true;
+    std::ifstream inSol(arquivoSolucao);
+    if(inSol.is_open()) {
+        std::string linha;
+        if(std::getline(inSol, linha)) {
+            if(linha.find("Custo:") != std::string::npos) {
+                try {
+                    double custoAntigo = std::stod(linha.substr(linha.find(":") + 1));
+                    if(melhorSolucaoGlobal.custoTotal >= custoAntigo) {
+                        deveAtualizar = false;
+                        std::cout << " A solucao atual (" << std::fixed << std::setprecision(2) << melhorSolucaoGlobal.custoTotal 
+                                  << ") nao superou a salva anteriormente (" << custoAntigo << "). O arquivo .txt e a imagem foram mantidos.\n";
+                    }
+                } catch(...) {}
+            }
         }
-        outSol.close();
-        std::cout << " Melhor solucao exportada para " << arquivoSolucao << "\n";
-        
-        std::cout << " Gerando grafico da solucao automaticamente...\n";
-        std::string comando = "python plotar_solucao.py " + caminhoArquivo;
-        system(comando.c_str());
+        inSol.close();
+    }
+
+    if(deveAtualizar) {
+        std::ofstream outSol(arquivoSolucao);
+        if(outSol.is_open()) {
+            outSol << "Custo: " << std::fixed << std::setprecision(2) << melhorSolucaoGlobal.custoTotal << "\n";
+            for(const auto& ar : melhorSolucaoGlobal.arestas) {
+                outSol << ar.origem << " " << ar.destino << "\n";
+            }
+            outSol.close();
+            std::cout << " Melhor solucao (Custo: " << melhorSolucaoGlobal.custoTotal << ") exportada para " << arquivoSolucao << "\n";
+            
+            std::cout << " Gerando grafico da solucao automaticamente...\n";
+            std::string comando = "python plotar_solucao.py " + caminhoArquivo;
+            system(comando.c_str());
+        }
     }
     
     delete grafo;

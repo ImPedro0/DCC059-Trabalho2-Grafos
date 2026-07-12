@@ -39,12 +39,19 @@ def plotar_solucao(caminho_instancia):
             
     # LER SOLUÇÃO
     arestas_solucao = []
+    custo_solucao = None
     with open(arquivo_solucao, 'r') as f:
         for linha in f:
             linha = linha.strip()
             if not linha: continue
-            u, v = map(int, linha.split())
-            arestas_solucao.append((u, v))
+            if linha.lower().startswith('custo:'):
+                custo_solucao = linha.split(':')[1].strip()
+                continue
+            
+            partes = linha.split()
+            if len(partes) >= 2:
+                u, v = int(partes[0]), int(partes[1])
+                arestas_solucao.append((u, v))
             
     # ==========================
     # DESENHAR
@@ -83,7 +90,11 @@ def plotar_solucao(caminho_instancia):
     plt.legend(handles=legend_patches, title="Legenda", loc='upper left', bbox_to_anchor=(1.02, 1), borderaxespad=0.)
 
     nome_arquivo = os.path.basename(caminho_instancia)
-    plt.title(f"Solução Encontrada: {nome_arquivo}\nAs linhas vermelhas representam o melhor caminho construído pelo GRASP.", fontsize=13, fontweight='bold', pad=15)
+    titulo = f"Solução Encontrada: {nome_arquivo}"
+    if custo_solucao:
+        titulo += f" (Custo: {custo_solucao})"
+    titulo += "\nAs linhas vermelhas representam o melhor caminho construído pelo GRASP."
+    plt.title(titulo, fontsize=13, fontweight='bold', pad=15)
     plt.axis('off')
     
     arquivo_imagem = base_nome + '_solucao.png'

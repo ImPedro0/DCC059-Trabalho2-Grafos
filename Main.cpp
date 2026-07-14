@@ -229,6 +229,7 @@ int main(int argc, char* argv[]) {
         double custoMelhor = 1e9;
         double tempoMedio = 0.0;
         double gapMedio = 0.0;
+        double gapMelhor = 0.0;
         int count = 0;
     };
     
@@ -253,6 +254,7 @@ int main(int argc, char* argv[]) {
             stat.custoMedio /= stat.count;
             stat.tempoMedio /= stat.count;
             stat.gapMedio /= stat.count;
+            stat.gapMelhor = calcularGap(stat.custoMelhor, otimoCOnhecido);
             stats.push_back(stat);
         }
     }
@@ -262,8 +264,9 @@ int main(int argc, char* argv[]) {
               << std::right << std::setw(12) << "Melhor Custo" << " | "
               << std::setw(11) << "Custo Medio" << " | "
               << std::setw(16) << "Tempo Medio (ms)" << " | "
+              << std::setw(14) << "GAP Melhor (%)" << " | "
               << std::setw(13) << "GAP Medio (%)" << "\n";
-    std::cout << "----------+--------------+-------------+------------------+--------------\n";
+    std::cout << "----------+--------------+-------------+------------------+----------------+--------------\n";
     
     for (const auto& stat : stats) {
         std::cout << std::left << std::setw(10) << stat.nome << "| "
@@ -271,6 +274,7 @@ int main(int argc, char* argv[]) {
                   << std::setw(12) << stat.custoMelhor << " | "
                   << std::setw(11) << stat.custoMedio << " | "
                   << std::setw(16) << stat.tempoMedio << " | "
+                  << std::setw(14) << stat.gapMelhor << " | "
                   << std::setw(13) << stat.gapMedio << "\n";
     }
     

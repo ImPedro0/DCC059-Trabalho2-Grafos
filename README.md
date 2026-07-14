@@ -37,7 +37,7 @@ g++ Main.cpp Grafo.cpp Algoritmos.cpp -o trabalho2.exe
 
 O programa pode receber até 3 parâmetros via linha de comando:
 1. `Caminho da Instancia` (Obrigatório caso queira testar uma instância específica gerada)
-2. `Custo Ótimo Conhecido` (Padrão: *5.0*)
+2. `Custo Ótimo Conhecido` (Padrão: *1e9*)
 3. `Seed / Semente` (Opcional. Se não informada, usa a data/hora do sistema).
 
 ### Executando no Linux
